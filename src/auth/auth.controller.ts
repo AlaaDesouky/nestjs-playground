@@ -1,7 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { User } from '@prisma/client';
-import { catchError, from, map, Observable, of, switchMap, throwError } from 'rxjs';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { catchError, Observable, of, switchMap } from 'rxjs';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto';
 
