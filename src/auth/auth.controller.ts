@@ -10,9 +10,9 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Post('/register')
-  register(@Body() dto: AuthDto): Observable<User | Object> {
+  register(@Body() dto: AuthDto): Observable<Object> {
     return this.authService.register(dto).pipe(
-      map((user: User) => user),
+      switchMap((jwt) => jwt),
       catchError(error => of({ error: error.message }))
     )
   }
@@ -20,7 +20,7 @@ export class AuthController {
   @Post('/login')
   login(@Body() dto: AuthDto): Observable<User | Object> {
     return this.authService.login(dto).pipe(
-      map((user: User) => user),
+      switchMap((jwt) => jwt),
       catchError(error => of({ error: error.message }))
     )
   }

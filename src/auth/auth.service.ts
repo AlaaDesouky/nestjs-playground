@@ -1,14 +1,16 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { catchError, from, map, Observable, switchMap } from 'rxjs';
+import { catchError, from, map, Observable, of, switchMap } from 'rxjs';
 import * as argon from 'argon2'
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthDto } from './dto';
 import { User } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService, private jwt: JwtService, private config: ConfigService) { }
 
   register(dto: AuthDto) {
     return this.hashPassword(dto.password).pipe(
@@ -20,8 +22,11 @@ export class AuthService {
           }
         })).pipe(
           map((user: User) => {
-            delete user.password
-            return user
+            return this.generateJwtSignToken(user.id, user.email).pipe(
+              map(jwt => {
+                return { access_token: jwt }
+              })
+            )
           }),
           catchError(error => {
             if (error instanceof PrismaClientKnownRequestError) {
@@ -41,8 +46,11 @@ export class AuthService {
       switchMap((user: User) => this.comparePassword(user.password, dto.password).pipe(
         map((match: boolean) => {
           if (match) {
-            delete user.password
-            return user
+            return this.generateJwtSignToken(user.id, user.email).pipe(
+              map(jwt => {
+                return { access_token: jwt }
+              })
+            )
           } else {
             throw Error
           }
@@ -60,5 +68,11 @@ export class AuthService {
 
   comparePassword(passwordHash: string, password: string): Observable<boolean> {
     return from(argon.verify(passwordHash, password))
+  }
+
+  generateJwtSignToken(userId: number, email: string): Observable<string> {
+    return from(this.jwt.signAsync(
+      { sub: userId, email },
+      { expiresIn: '15m', secret: this.config.get('JWT_SECRET') }))
   }
 }
