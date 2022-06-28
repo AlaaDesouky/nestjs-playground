@@ -36,11 +36,29 @@ export class AuthService {
     )
   }
 
-  login() {
-    return { res: 'login' }
+  login(dto: AuthDto) {
+    return from(this.prisma.user.findUnique({ where: { email: dto.email } })).pipe(
+      switchMap((user: User) => this.comparePassword(user.password, dto.password).pipe(
+        map((match: boolean) => {
+          if (match) {
+            delete user.password
+            return user
+          } else {
+            throw Error
+          }
+        })
+      )),
+      catchError(error => {
+        throw new ForbiddenException('Credentials Error: incorrect email/password')
+      })
+    )
   }
 
   hashPassword(password: string): Observable<string> {
     return from(argon.hash(password))
+  }
+
+  comparePassword(passwordHash: string, password: string): Observable<boolean> {
+    return from(argon.verify(passwordHash, password))
   }
 }

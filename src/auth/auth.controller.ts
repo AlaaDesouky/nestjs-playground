@@ -18,7 +18,10 @@ export class AuthController {
   }
 
   @Post('/login')
-  login(@Body() dto: AuthDto) {
-    return this.authService.login()
+  login(@Body() dto: AuthDto): Observable<User | Object> {
+    return this.authService.login(dto).pipe(
+      map((user: User) => user),
+      catchError(error => of({ error: error.message }))
+    )
   }
 }
